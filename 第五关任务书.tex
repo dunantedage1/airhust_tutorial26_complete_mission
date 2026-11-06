@@ -1,0 +1,129 @@
+\documentclass[11pt]{ctexart}
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage{titlesec}
+
+\setlist{nosep,leftmargin=2em}
+\titleformat{\section}{\Large\bfseries}{\thesection}{0.8em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.6em}{}
+\setlength{\parskip}{0.35em}
+\linespread{1.35}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries AirHust 2026 级梯队计划}\\[0.3em]
+{\LARGE\bfseries 第五关任务书}\\[0.6em]
+{\large 综合任务：17\,m $\times$ 8\,m 大地图}
+\end{center}
+
+\vspace{0.6em}
+
+\section{前言}
+
+恭喜你走到了最后一关。前面四个板块，你学会了配环境、写 ROS 节点、调视觉算法，也一块一块跑通了五个视觉任务。这一关不再拆成小关，而是把之前学过的东西串成一条完整的任务链：起飞、避障、穿门或穿环、识别、降落。
+
+这一关考察的不是你会不会写某个函数，而是你能不能在一条完整的飞行流程里把识别、控制和决策串起来，以及在出现偏差时能不能定位到问题出在哪一环。请你独立或组队完成，并在答辩时讲清楚你的实现思路。
+
+\section{任务概述}
+
+任务在一个 17\,m $\times$ 8\,m 的封闭场地里进行。场地从左到右依次是起飞区、避障区、穿门/穿环区、视觉识别区，底部有一条贯通的跳关通道。无人机从起飞区的 H 标上起飞，机头朝 $+x$ 方向。
+
+坐标约定：场地左上角为原点 $(-10,0)$，$+x$ 向右，$+y$ 向上（绘制俯视图时 $y$ 轴向下为负），场地范围 $x\in[-10,7]$、$y\in[-8,0]$。实际世界里地面在 $z=0$，墙高 2\,m，四周墙体半透明。
+
+\section{场地说明}
+
+场地总长 17\,m、宽 8\,m，各区域划分如下：
+
+\begin{center}
+\begin{tabular}{@{}llll@{}}
+\toprule
+区域 & $x$ 范围 & $y$ 范围 & 说明 \\
+\midrule
+起飞区 & $-10$ \textasciitilde{} $-9$ & 0 \textasciitilde{} $-8$ & H 标在 $(-9.5,-4)$，边长 0.8\,m \\
+避障区 & $-9$ \textasciitilde{} $-3$ & 0 \textasciitilde{} $-6$ & 12 根柱子，半径 0.1\,m、高 1.5\,m，彼此净距大于 1\,m，位置随机 \\
+过渡区 & $-3$ \textasciitilde{} $-2$ & 0 \textasciitilde{} $-8$ & 空场，可从这里进出跳关通道 \\
+穿门区 & $-2$ \textasciitilde{} 2 & 0 \textasciitilde{} $-3$ & 两个门，其中一个固定在 $x=2$ \\
+穿环区 & $-2$ \textasciitilde{} 2 & $-3$ \textasciitilde{} $-6$ & 方环内径 $1\times0.75$\,m，外径大 5\,cm，中心高 1.2\,m，带两条腿落地 \\
+跳关通道 & $-9$ \textasciitilde{} 2 & $-6$ \textasciitilde{} $-8$ & 贯通走廊，从两端进出 \\
+过渡区 & 2 \textasciitilde{} 3 & 0 \textasciitilde{} $-8$ & 空场 \\
+视觉识别区 & 3 \textasciitilde{} 7 & 0 \textasciitilde{} $-8$ & 二维码在 $(3.5,-4)$，三张图片在 $x=5.5$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+每次启动时，柱子位置、两个门的位置与门型、方环位置、二维码内容以及三张图片的摆放顺序都会重新随机生成。门的三种类型按通道位置区分：左门通道在 $y\in[-1,0]$，中门在 $y\in[-2,-1]$，右门在 $y\in[-3,-2]$，其余部分是墙。
+
+两个门中，一个固定在 $x=2$，另一个在 $x\in[-1,0]$ 内随机，两者间距必然大于 1.5\,m。门区和穿环区之间在 $y=-3$ 处还有一道贯通的隔墙，$x\in[-2,2]$ 范围内不能直接往南飞，要从两端的过渡区绕行。
+
+方环在 $x\in[-1,1.5]$、$y\in[-5.3,-3.7]$ 内随机，内径 $1\,\mathrm{m}\times0.75\,\mathrm{m}$，外径比内径大 5\,cm，环心高度 1.2\,m，两条腿直接落到地面。
+
+二维码的内容是 \texttt{doubao}、\texttt{qianwen}、\texttt{pangu} 三者之一；三张图片分别是这三个名字对应的图案，随机摆放在 $(5.5,-2)$、$(5.5,-4)$、$(5.5,-6)$ 三处，边长 0.6\,m。
+
+\section{任务流程与评分}
+
+任务共有四个得分点，满分 180 分。你可以按顺序完成，也可以根据自己的策略调整顺序，但起飞必须在最前面。
+
+\subsection{起飞（30 分）}
+
+从 H 标起飞，稳定悬停到 1.2\,m 高度并保持 3 秒。完成得 30 分，未能完成得 0 分。
+
+\subsection{避障（50 分）}
+
+穿越避障区，从 $x<-9$ 一侧飞到 $x>-3$ 一侧。成功穿越得 50 分；过程中每发生一次碰撞扣 10 分，扣完为止。碰撞但不影响继续飞行的，按次扣分。
+
+\subsection{穿门或穿环（60 分）}
+
+穿门区和穿环区任选其一完成即可得 60 分；每碰撞一次扣 10 分，扣完为止。
+
+如果你有把握，可以在完成其中一项之后，通过底部的跳关通道回到 $x\in[-3,-2]$ 的过渡区，再完成另一项，两项的分数同时计入（总计 120 分）。跳关通道可以从 $x\in[-3,-2]$ 和 $x\in[2,3]$ 两个位置进出。
+
+\subsection{视觉识别（50 分）}
+
+飞到二维码上方解码出字符串（10 分），然后前往字符串对应的图片上方并降落（40 分）。降落错误不得分。识别过程中允许在空中悬停调整，但最终必须落在正确的图片上。
+
+\begin{center}
+\begin{tabular}{@{}lll@{}}
+\toprule
+得分点 & 分值 & 扣分规则 \\
+\midrule
+起飞并悬停 3 秒 & 30 & 未完成 0 分 \\
+穿越避障区 & 50 & 每次碰撞 $-10$ \\
+穿门或穿环 & 60 & 每次碰撞 $-10$；两项都完成计 120 \\
+二维码解码 & 10 & 未解出 0 分 \\
+降落到正确图片 & 40 & 降错 0 分 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{提交要求}
+
+请提交一个完整的 catkin 工作空间，包含你的节点代码、launch 文件与必要的说明文档。同时把代码上传到 GitHub，我们将通过克隆的方式获取。
+
+\begin{itemize}
+\item 代码：能直接 \texttt{catkin\_make} 通过，\texttt{roslaunch} 一键起飞。
+\item 文档：说明你的实现思路、关键参数、遇到的问题和解决办法。
+\item 演示：一段完整的任务录像，或答辩时现场演示。
+\end{itemize}
+
+\section{测试与评分}
+
+完成任务后联系我们安排测试，统一在标准测试端运行。测试时会重新随机生成场地布局，你的程序需要能适应不同的柱子、门和图片排布。
+
+最终成绩由测试分数与答辩表现共同决定。
+
+\section{时间安排}
+
+提交时间与答辩时间以梯队群通知为准，请预留出调试和写文档的时间。
+
+\section{结语}
+
+这一关没有标准答案。同样的任务，有人用最简单的比例控制就能过，有人写了一整套状态机。我们更关心的是：你能不能把问题拆开、能不能定位错误、能不能在有限的时间里做出可用的东西。
+
+祝你好运，我们赛场上见。
+
+\end{document}

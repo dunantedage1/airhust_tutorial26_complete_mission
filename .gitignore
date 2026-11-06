@@ -1,0 +1,17 @@
+# build
+build/
+devel/
+install/
+.catkin_workspace
+src/CMakeLists.txt
+
+# python
+__pycache__/
+*.pyc
+
+# latex 中间产物
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
