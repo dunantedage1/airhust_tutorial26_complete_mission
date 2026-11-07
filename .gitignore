@@ -1,6 +1,9 @@
 # macOS
 .DS_Store
 
+# 任务书源文件（只提交 PDF）
+第五关任务书.tex
+
 # build
 build/
 devel/
