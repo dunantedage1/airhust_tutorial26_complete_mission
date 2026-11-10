@@ -5,7 +5,7 @@
     <!-- 打开 Gazebo 时的初始视角：整张地图的俯视 -->
     <gui>
       <camera name="user_camera">
-        <pose>-1.5 -4 16 0 -1.5708 0</pose>
+        <pose>-9.5 -4 8 0 -1.5708 0</pose>
       </camera>
     </gui>
 
