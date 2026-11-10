@@ -24,3 +24,10 @@ __pycache__/
 *.fdb_latexmk
 *.fls
 *.xdv
+
+# 离线生成柱子布局的脚本与预览图（只提交 pillar_layouts.json）
+src/airhust_complete_mission/scripts/gen_pillar_layouts.py
+src/airhust_complete_mission/scripts/pillar_layouts_*.png
+
+# 模型权重
+src/airhust_complete_mission/models/yolo26n_pad.pt

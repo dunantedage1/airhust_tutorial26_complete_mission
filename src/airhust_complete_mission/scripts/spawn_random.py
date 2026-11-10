@@ -3,13 +3,16 @@
 """第五关大地图：每次启动时随机摆放障碍柱、门、方环、二维码和图片。
 
 约束：
-  - 12 根柱子半径 0.1m、高 1.5m，任意两根之间净间距 > 1m
+  - 8 根柱子半径 0.1m、高 1.5m，从 pillar_layouts.json 中随机取一组
+    （离线预生成的 APF 可通行布局）
   - 两个门：一个固定在 x = 2，另一个在 x ∈ [-1, 0] 随机，
     左/中/右三种门型里随机取两种
   - 方环内径 1m × 0.75m，中心高 1.2m，x ∈ [-1, 1.5]，y ∈ [-5.3, -3.7]
   - 二维码三种（doubao / qianwen / pangu）随机一个，
     三张图片随机摆在 (5.5,-2)、(5.5,-4)、(5.5,-6)
 """
+import json
+import os
 import random
 
 import rospy
@@ -23,7 +26,8 @@ WHITE = ("<material><script><uri>%s</uri><name>Gazebo/White</name></script></mat
 
 PILLAR_R = 0.1
 PILLAR_H = 1.5
-PILLAR_GAP = 1.0          # 两根柱子之间的净间距
+PILLAR_LAYOUT_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  "pillar_layouts.json")
 RING_IN_W = 1.0           # y 方向内径
 RING_IN_H = 0.75          # z 方向内径
 RING_TUBE = 0.105
@@ -109,15 +113,11 @@ class Spawner(object):
 
     # ---- 各类物体 ----
     def pillars(self):
-        pts = []
-        tries = 0
-        while len(pts) < 12 and tries < 500000:
-            tries += 1
-            x = random.uniform(-8.6, -3.4)
-            y = random.uniform(-5.6, -0.4)
-            if all((x - px) ** 2 + (y - py) ** 2 >= (PILLAR_GAP + 2 * PILLAR_R) ** 2
-                   for px, py in pts):
-                pts.append((x, y))
+        with open(PILLAR_LAYOUT_FILE) as f:
+            layouts = json.load(f)["layouts"]
+        layout = random.choice(layouts)
+        pts = [tuple(p) for p in layout["pillars"]]
+        rospy.loginfo("柱子布局 #%d（离线生成，尝试 %d 次）", layout["id"], layout["attempts"])
         for i, (x, y) in enumerate(pts):
             self.spawn("pillar_%d" % (i + 1), pillar_sdf("pillar_%d" % (i + 1)),
                        x, y, PILLAR_H / 2.0)
